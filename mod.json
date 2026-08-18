@@ -1,0 +1,13 @@
+{
+  "geode": "4.0.0",
+  "gd": {
+    "win": "2.2074",
+    "mac": "2.2074",
+    "android": "2.2074"
+  },
+  "id": "YallCode.level_tags",
+  "name": "Level Tag System",
+  "version": "v1.0.0",
+  "developer": "YallCode",
+  "description": "Add custom tags to levels and filter your searches using Geode!"
+}
