@@ -2,6 +2,7 @@
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
 #include <Geode/ui/Popup.hpp>
+#include <matjson/stl.hpp>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -137,8 +138,7 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
         auto rightMenu = this->getChildByID("right-side-menu");
 
         if (rightMenu) {
-            auto tagSpr = ButtonSprite::create("Tags");
-            tagSpr->setScale(0.7f);
+            auto tagSpr = ButtonSprite::create("Tags", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 
             auto tagBtn = CCMenuItemSpriteExtra::create(
                 tagSpr,
@@ -284,8 +284,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
         auto menu = CCMenu::create();
         menu->setPosition({winSize.width - 40.f, winSize.height - 30.f});
 
-        auto filterSpr = ButtonSprite::create("Filter");
-        filterSpr->setScale(0.6f);
+        auto filterSpr = ButtonSprite::create("Filter", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 
         auto filterBtn = CCMenuItemSpriteExtra::create(
             filterSpr,
@@ -319,7 +318,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
             
             for (unsigned int i = 0; i < m_fields->m_cachedLevels->count(); ++i) {
                 auto rawObj = m_fields->m_cachedLevels->objectAtIndex(i);
-                auto obj = static_cast<GJGameLevel*>(rawObj);
+                auto obj = geode::cast::typeinfo_cast<GJGameLevel*>(rawObj);
                 if (!obj) continue;
 
                 bool matchesAll = true;
