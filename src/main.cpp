@@ -14,7 +14,7 @@ const std::vector<std::string> AVAILABLE_TAGS = {
 };
 
 // ==========================================
-// Helper Functions for Persistence & Tag Logic
+// Helper Functions for Persistence
 // ==========================================
 
 static std::string getLevelKey(GJGameLevel* level) {
@@ -54,10 +54,10 @@ static void toggleTagForLevel(GJGameLevel* level, const std::string& tag) {
 static std::vector<std::string> g_activeFilters;
 
 // ==========================================
-// Tag Manager Popup UI
+// Tag Manager Popup UI (Level Info)
 // ==========================================
 
-class TagPopup : public Popup<GJGameLevel*> {
+class TagPopup : public geode::Popup<GJGameLevel*> {
 protected:
     GJGameLevel* m_level = nullptr;
     std::function<void()> m_onCloseCallback;
@@ -68,12 +68,10 @@ protected:
 
         auto winSize = m_mainLayer->getContentSize();
 
-        // Create container menu for toggle buttons
         auto menu = CCMenu::create();
         menu->setContentSize({winSize.width - 40.f, winSize.height - 70.f});
         menu->setPosition({winSize.width / 2.f, winSize.height / 2.f - 10.f});
         
-        // Arrange tags in a neat grid layout
         auto layout = RowLayout::create();
         layout->setGap(8.f);
         layout->setFlexWrap(FlexWrap::Wrap);
@@ -88,35 +86,28 @@ protected:
 
     void refreshButtons(CCMenu* menu) {
         menu->removeAllChildren();
-
         auto currentTags = getTagsForLevel(m_level);
 
         for (const auto& tag : AVAILABLE_TAGS) {
             bool hasTag = std::find(currentTags.begin(), currentTags.end(), tag) != currentTags.end();
 
-            // Use GD Sprites for toggle-style display
-            auto label = CCLabelBMFont::create(tag.c_str(), "bigFont.fnt");
-            label->setScale(0.4f);
+            // Safely build buttons out of basic Cocos2d-x elements to avoid ButtonSprite overload crashes
+            auto bg = CCScale9Sprite::create(hasTag ? "GJ_button_02.png" : "GJ_button_01.png");
+            bg->setContentSize({90.f, 30.f});
 
-            auto btnSpr = ButtonSprite::create(
-                tag.c_str(),
-                80,
-                true,
-                "bigFont.fnt",
-                hasTag ? "GJ_button_02.png" : "GJ_button_01.png",
-                25.f,
-                0.4f
-            );
+            auto lbl = CCLabelBMFont::create(tag.c_str(), "bigFont.fnt");
+            lbl->setScale(0.4f);
+            lbl->setPosition(bg->getContentSize() / 2.f);
+            bg->addChild(lbl);
 
             auto btn = CCMenuItemSpriteExtra::create(
-                btnSpr,
+                bg,
                 this,
                 menu_selector(TagPopup::onToggleTag)
             );
             btn->setUserObject(CCString::create(tag));
             menu->addChild(btn);
         }
-
         menu->updateLayout();
     }
 
@@ -125,10 +116,7 @@ protected:
         auto tagObj = static_cast<CCString*>(btn->getUserObject());
         if (!tagObj) return;
 
-        std::string tag = tagObj->getCString();
-        toggleTagForLevel(m_level, tag);
-
-        // Refresh UI
+        toggleTagForLevel(m_level, tagObj->getCString());
         refreshButtons(static_cast<CCMenu*>(btn->getParent()));
     }
 
@@ -145,15 +133,13 @@ public:
     }
 
     void onClose(CCObject* sender) override {
-        if (m_onCloseCallback) {
-            m_onCloseCallback();
-        }
-        Popup::onClose(sender);
+        if (m_onCloseCallback) m_onCloseCallback();
+        geode::Popup<GJGameLevel*>::onClose(sender);
     }
 };
 
 // ==========================================
-// LevelInfoLayer Hook (Tag Display & Button)
+// LevelInfoLayer Hook
 // ==========================================
 
 class $modify(MyLevelInfoLayer, LevelInfoLayer) {
@@ -165,9 +151,8 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
         if (!LevelInfoLayer::init(level, challenge)) return false;
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
-
-        // Add 'Tags' button to the right side menu
         auto rightMenu = this->getChildByID("right-side-menu");
+
         if (rightMenu) {
             auto tagSpr = ButtonSprite::create("Tags", "goldFont.fnt", "GJ_button_01.png", .7f);
             tagSpr->setScale(0.7f);
@@ -182,7 +167,6 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
             rightMenu->updateLayout();
         }
 
-        // Create persistent container node for tag badges
         m_fields->m_tagContainer = CCNode::create();
         m_fields->m_tagContainer->setPosition({winSize.width / 2.f, 80.f});
         
@@ -190,7 +174,6 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
         layout->setGap(5.f);
         layout->setAxisAlignment(AxisAlignment::Center);
         m_fields->m_tagContainer->setLayout(layout);
-        
         this->addChild(m_fields->m_tagContainer);
 
         updateTagBadges();
@@ -222,21 +205,20 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
 
             m_fields->m_tagContainer->addChild(bg);
         }
-
         m_fields->m_tagContainer->setContentSize({300.f, 25.f});
         m_fields->m_tagContainer->updateLayout();
     }
 };
 
 // ==========================================
-// LevelBrowserLayer Hook (Filtering System)
+// Filter Popup UI (Level Browser)
 // ==========================================
 
-class FilterPopup : public Popup<CCArray*> {
+class FilterPopup : public geode::Popup<> {
 protected:
     std::function<void()> m_onApplyFilter;
 
-    bool setup(CCArray* levels) override {
+    bool setup() override {
         this->setTitle("Filter Levels by Tags");
         auto winSize = m_mainLayer->getContentSize();
 
@@ -253,18 +235,16 @@ protected:
         for (const auto& tag : AVAILABLE_TAGS) {
             bool isActive = std::find(g_activeFilters.begin(), g_activeFilters.end(), tag) != g_activeFilters.end();
 
-            auto btnSpr = ButtonSprite::create(
-                tag.c_str(),
-                80,
-                true,
-                "bigFont.fnt",
-                isActive ? "GJ_button_02.png" : "GJ_button_04.png",
-                25.f,
-                0.4f
-            );
+            auto bg = CCScale9Sprite::create(isActive ? "GJ_button_02.png" : "GJ_button_04.png");
+            bg->setContentSize({90.f, 30.f});
+
+            auto lbl = CCLabelBMFont::create(tag.c_str(), "bigFont.fnt");
+            lbl->setScale(0.4f);
+            lbl->setPosition(bg->getContentSize() / 2.f);
+            bg->addChild(lbl);
 
             auto btn = CCMenuItemSpriteExtra::create(
-                btnSpr,
+                bg,
                 this,
                 menu_selector(FilterPopup::onToggleFilterTag)
             );
@@ -290,17 +270,15 @@ protected:
             g_activeFilters.push_back(tag);
         }
 
-        if (m_onApplyFilter) {
-            m_onApplyFilter();
-        }
+        if (m_onApplyFilter) m_onApplyFilter();
         this->onClose(sender);
     }
 
 public:
-    static FilterPopup* create(CCArray* levels, std::function<void()> onApply) {
+    static FilterPopup* create(std::function<void()> onApply) {
         auto ret = new FilterPopup();
         ret->m_onApplyFilter = onApply;
-        if (ret && ret->initAnchored(320.f, 220.f, levels)) {
+        if (ret && ret->initAnchored(320.f, 220.f)) {
             ret->autorelease();
             return ret;
         }
@@ -309,17 +287,24 @@ public:
     }
 };
 
+// ==========================================
+// LevelBrowserLayer Hook
+// ==========================================
+
 class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
+    struct Fields {
+        Ref<CCArray> m_cachedLevels; 
+        bool m_isFiltering = false;
+    };
+
     bool init(GJSearchObject* search) {
         if (!LevelBrowserLayer::init(search)) return false;
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
-
-        // Add Filter button to browser header
         auto menu = CCMenu::create();
         menu->setPosition({winSize.width - 40.f, winSize.height - 30.f});
 
-        auto filterSpr = ButtonSprite::create("Tag Filter", "goldFont.fnt", "GJ_button_01.png", .6f);
+        auto filterSpr = ButtonSprite::create("Filter", "goldFont.fnt", "GJ_button_01.png", .6f);
         filterSpr->setScale(0.6f);
 
         auto filterBtn = CCMenuItemSpriteExtra::create(
@@ -334,17 +319,28 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     }
 
     void onOpenFilter(CCObject* sender) {
-        auto popup = FilterPopup::create(m_levels, [this]() {
-            this->setupLevelBrowser(m_levels);
+        auto popup = FilterPopup::create([this]() {
+            if (m_fields->m_cachedLevels) {
+                // Trigger a refresh using our safely retained original level list
+                m_fields->m_isFiltering = true;
+                this->setupLevelBrowser(m_fields->m_cachedLevels);
+                m_fields->m_isFiltering = false; 
+            }
         });
         popup->show();
     }
 
-    void setupLevelBrowser(CCArray* levels) override {
-        // Filter out levels that don't match selected active tags
-        if (!g_activeFilters.empty() && levels) {
+    void setupLevelBrowser(CCArray* levels) {
+        // Cache the levels provided by the server only if we aren't currently filtering them
+        if (!m_fields->m_isFiltering) {
+            m_fields->m_cachedLevels = levels;
+        }
+
+        if (!g_activeFilters.empty() && m_fields->m_cachedLevels) {
             auto filtered = CCArray::create();
-            for (auto obj : CCDirectiveEnumerate(levels, GJGameLevel*)) {
+            
+            // Correct Geode array iteration
+            for (auto* obj : CCArrayExt<GJGameLevel*>(m_fields->m_cachedLevels)) {
                 bool matchesAll = true;
                 for (const auto& tag : g_activeFilters) {
                     if (!levelHasTag(obj, tag)) {
