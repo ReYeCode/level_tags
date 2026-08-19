@@ -1,36 +1,41 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.13)
+
+# Force fmt into header-only mode BEFORE CPM/Geode loads to fix Android NDK consteval errors
+set(FMT_HEADER_ONLY ON CACHE BOOL "" FORCE)
+set(FMT_OS OFF CACHE BOOL "" FORCE)
+
+# Include CPM if present in your repository
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
+    include(cmake/CPM.cmake)
+endif()
+
+# If using CPM for fmt, enforce modern 10.2.1 tag
+if(COMMAND CPMAddPackage)
+    CPMAddPackage(
+        NAME fmt
+        GITHUB_REPOSITORY fmtlib/fmt
+        GIT_TAG 10.2.1
+        OPTIONS
+            "FMT_HEADER_ONLY ON"
+            "FMT_DOC OFF"
+            "FMT_TEST OFF"
+    )
+endif()
+
+# Project definition
+project(Level_Tags VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(FMT_OS OFF CACHE BOOL "" FORCE)
 
-if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
-    set(CMAKE_OSX_ARCHITECTURES "arm64")
-else()
-    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
-endif()
+# Load Geode SDK
+find_package(Geode REQUIRED)
 
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+# Include all C++ files inside your src folder
+file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-project(LevelTagSystem VERSION 1.0.0)
-
-# Recursively locate source files in src/
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-
-# Define shared library target
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE FMT_USE_CONSTEXPR=0)
-
-# Validate GEODE_SDK path
-if (NOT DEFINED ENV{GEODE_SDK})
-    message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
-else()
-    message(STATUS "Found Geode: $ENV{GEODE_SDK}")
-endif()
-
-# Include Geode SDK directly
-add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
-
-# Link mod binary to Geode
-setup_geode_mod(${PROJECT_NAME})
+# Geode build target
+setup_geode_mod(
+    ${PROJECT_NAME}
+    SOURCES ${SOURCES}
+)
