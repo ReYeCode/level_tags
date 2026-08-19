@@ -14,7 +14,7 @@ const std::vector<std::string> AVAILABLE_TAGS = {
 
 static std::string getLevelKey(GJGameLevel* level) {
     if (!level) return "";
-    return "tags_level_" + std::to_string(level->m_levelID.value());
+    return "tags_level_" + std::to_string(static_cast<int>(level->m_levelID));
 }
 
 static std::vector<std::string> getTagsForLevel(GJGameLevel* level) {
@@ -319,7 +319,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
             
             for (unsigned int i = 0; i < m_fields->m_cachedLevels->count(); ++i) {
                 auto rawObj = m_fields->m_cachedLevels->objectAtIndex(i);
-                auto obj = geode::cast::typeinfo_cast<GJGameLevel*>(rawObj);
+                auto obj = static_cast<GJGameLevel*>(rawObj);
                 if (!obj) continue;
 
                 bool matchesAll = true;
