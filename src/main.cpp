@@ -14,7 +14,7 @@ const std::vector<std::string> AVAILABLE_TAGS = {
 };
 
 // ==========================================
-// Helper Functions for Persistence
+// Persistence Helpers
 // ==========================================
 
 static std::string getLevelKey(GJGameLevel* level) {
@@ -50,11 +50,10 @@ static void toggleTagForLevel(GJGameLevel* level, const std::string& tag) {
     saveTagsForLevel(level, tags);
 }
 
-// Global active filter tags selected by user
 static std::vector<std::string> g_activeFilters;
 
 // ==========================================
-// Tag Manager Popup UI (Level Info)
+// Tag Manager Popup UI
 // ==========================================
 
 class TagPopup : public geode::Popup<GJGameLevel*> {
@@ -91,7 +90,6 @@ protected:
         for (const auto& tag : AVAILABLE_TAGS) {
             bool hasTag = std::find(currentTags.begin(), currentTags.end(), tag) != currentTags.end();
 
-            // Safely build buttons out of basic Cocos2d-x elements to avoid ButtonSprite overload crashes
             auto bg = CCScale9Sprite::create(hasTag ? "GJ_button_02.png" : "GJ_button_01.png");
             bg->setContentSize({90.f, 30.f});
 
@@ -120,6 +118,11 @@ protected:
         refreshButtons(static_cast<CCMenu*>(btn->getParent()));
     }
 
+    void keyBackClicked() override {
+        if (m_onCloseCallback) m_onCloseCallback();
+        geode::Popup<GJGameLevel*>::keyBackClicked();
+    }
+
 public:
     static TagPopup* create(GJGameLevel* level, std::function<void()> onClose = nullptr) {
         auto ret = new TagPopup();
@@ -130,11 +133,6 @@ public:
         }
         CC_SAFE_DELETE(ret);
         return nullptr;
-    }
-
-    void onClose(CCObject* sender) override {
-        if (m_onCloseCallback) m_onCloseCallback();
-        geode::Popup<GJGameLevel*>::onClose(sender);
     }
 };
 
@@ -147,14 +145,14 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
         CCNode* m_tagContainer = nullptr;
     };
 
-    bool init(GJGameLevel* level, bool challenge) {
+    bool init(GJGameLevel* level, bool challenge) override {
         if (!LevelInfoLayer::init(level, challenge)) return false;
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
         auto rightMenu = this->getChildByID("right-side-menu");
 
         if (rightMenu) {
-            auto tagSpr = ButtonSprite::create("Tags", "goldFont.fnt", "GJ_button_01.png", .7f);
+            auto tagSpr = ButtonSprite::create("Tags");
             tagSpr->setScale(0.7f);
 
             auto tagBtn = CCMenuItemSpriteExtra::create(
@@ -211,7 +209,7 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
 };
 
 // ==========================================
-// Filter Popup UI (Level Browser)
+// Filter Popup UI
 // ==========================================
 
 class FilterPopup : public geode::Popup<> {
@@ -271,7 +269,12 @@ protected:
         }
 
         if (m_onApplyFilter) m_onApplyFilter();
-        this->onClose(sender);
+        this->keyBackClicked();
+    }
+
+    void keyBackClicked() override {
+        if (m_onApplyFilter) m_onApplyFilter();
+        geode::Popup<>::keyBackClicked();
     }
 
 public:
@@ -297,14 +300,14 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
         bool m_isFiltering = false;
     };
 
-    bool init(GJSearchObject* search) {
+    bool init(GJSearchObject* search) override {
         if (!LevelBrowserLayer::init(search)) return false;
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
         auto menu = CCMenu::create();
         menu->setPosition({winSize.width - 40.f, winSize.height - 30.f});
 
-        auto filterSpr = ButtonSprite::create("Filter", "goldFont.fnt", "GJ_button_01.png", .6f);
+        auto filterSpr = ButtonSprite::create("Filter");
         filterSpr->setScale(0.6f);
 
         auto filterBtn = CCMenuItemSpriteExtra::create(
@@ -321,7 +324,6 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     void onOpenFilter(CCObject* sender) {
         auto popup = FilterPopup::create([this]() {
             if (m_fields->m_cachedLevels) {
-                // Trigger a refresh using our safely retained original level list
                 m_fields->m_isFiltering = true;
                 this->setupLevelBrowser(m_fields->m_cachedLevels);
                 m_fields->m_isFiltering = false; 
@@ -330,8 +332,7 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
         popup->show();
     }
 
-    void setupLevelBrowser(CCArray* levels) {
-        // Cache the levels provided by the server only if we aren't currently filtering them
+    void setupLevelBrowser(CCArray* levels) override {
         if (!m_fields->m_isFiltering) {
             m_fields->m_cachedLevels = levels;
         }
@@ -339,8 +340,10 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
         if (!g_activeFilters.empty() && m_fields->m_cachedLevels) {
             auto filtered = CCArray::create();
             
-            // Correct Geode array iteration
-            for (auto* obj : CCArrayExt<GJGameLevel*>(m_fields->m_cachedLevels)) {
+            for (unsigned int i = 0; i < m_fields->m_cachedLevels->count(); ++i) {
+                auto obj = typeinfo_cast<GJGameLevel*>(m_fields->m_cachedLevels->objectAtIndex(i));
+                if (!obj) continue;
+
                 bool matchesAll = true;
                 for (const auto& tag : g_activeFilters) {
                     if (!levelHasTag(obj, tag)) {
