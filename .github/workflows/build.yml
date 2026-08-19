@@ -14,7 +14,6 @@ on:
 jobs:
   build:
     strategy:
-      fail-fast: false
       matrix:
         config:
           - name: Windows
@@ -26,17 +25,16 @@ jobs:
             os: ubuntu-latest
             target: Android64
 
-    name: Build ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Build Mod
-        uses: geode-sdk/build-geode-mod@main
+        uses: geode-sdk/build-geode-mod@v3
         with:
           target: ${{ matrix.config.target }}
+          combine: true
 
   package:
     name: Package Geode Mod

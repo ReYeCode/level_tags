@@ -1,10 +1,15 @@
-cmake_minimum_required(VERSION 3.27.9)
+cmake_minimum_required(VERSION 3.13)
+project(LevelTagSystem VERSION 1.0.0 LANGUAGES CXX)
 
-# The project name doesn't have to strictly match the ID, but it's good practice.
-project(level-tags-mod VERSION 1.0.0)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find the Geode SDK
 find_package(Geode REQUIRED)
 
-# This standard Geode macro reads your mod.json and src/main.cpp to build the mod
-setup_geode_mod()
+setup_geode_mod(
+    ID "YallCode.level_tags"
+)
+
+target_sources(${PROJECT_NAME} PRIVATE
+    src/main.cpp
+)
