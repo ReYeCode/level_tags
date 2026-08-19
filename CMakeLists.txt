@@ -19,6 +19,8 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 # Define shared library target
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE FMT_USE_CONSTEXPR=0)
+
 # Validate GEODE_SDK path
 if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
