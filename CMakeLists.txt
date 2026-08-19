@@ -1,27 +1,33 @@
-cmake_minimum_required(VERSION 3.13)
-
-# Locate Geode SDK from environment variable if not passed directly
-if (NOT DEFINED GEODE_SDK)
-    if (DEFINED ENV{GEODE_SDK})
-        set(GEODE_SDK $ENV{GEODE_SDK})
-    else()
-        message(FATAL_ERROR "GEODE_SDK environment variable is not set!")
-    endif()
-endif()
-
-list(APPEND CMAKE_PREFIX_PATH ${GEODE_SDK})
-
-project(LevelTagSystem VERSION 1.0.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Geode REQUIRED)
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
+    set(CMAKE_OSX_ARCHITECTURES "arm64")
+else()
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+endif()
 
-setup_geode_mod(
-    ID "YallCode.level_tags"
-)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-target_sources(${PROJECT_NAME} PRIVATE
-    src/main.cpp
-)
+project(LevelTagSystem VERSION 1.0.0)
+
+# Recursively locate source files in src/
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
+
+# Define shared library target
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+# Validate GEODE_SDK path
+if (NOT DEFINED ENV{GEODE_SDK})
+    message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
+else()
+    message(STATUS "Found Geode: $ENV{GEODE_SDK}")
+endif()
+
+# Include Geode SDK directly
+add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
+
+# Link mod binary to Geode
+setup_geode_mod(${PROJECT_NAME})
