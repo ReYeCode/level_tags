@@ -8,14 +8,9 @@
 
 using namespace geode::prelude;
 
-// Available preset tags
 const std::vector<std::string> AVAILABLE_TAGS = {
     "Memory", "Gimmick", "Nostalgic", "XL", "Sync", "Fast-Paced", "Learny", "Decoration"
 };
-
-// ==========================================
-// Persistence Helpers
-// ==========================================
 
 static std::string getLevelKey(GJGameLevel* level) {
     if (!level) return "";
@@ -24,14 +19,12 @@ static std::string getLevelKey(GJGameLevel* level) {
 
 static std::vector<std::string> getTagsForLevel(GJGameLevel* level) {
     if (!level) return {};
-    std::string key = getLevelKey(level);
-    return Mod::get()->getSavedValue<std::vector<std::string>>(key, {});
+    return Mod::get()->getSavedValue<std::vector<std::string>>(getLevelKey(level), {});
 }
 
 static void saveTagsForLevel(GJGameLevel* level, const std::vector<std::string>& tags) {
     if (!level) return;
-    std::string key = getLevelKey(level);
-    Mod::get()->setSavedValue(key, tags);
+    Mod::get()->setSavedValue(getLevelKey(level), tags);
 }
 
 static bool levelHasTag(GJGameLevel* level, const std::string& tag) {
@@ -51,10 +44,6 @@ static void toggleTagForLevel(GJGameLevel* level, const std::string& tag) {
 }
 
 static std::vector<std::string> g_activeFilters;
-
-// ==========================================
-// Tag Manager Popup UI
-// ==========================================
 
 class TagPopup : public geode::Popup<GJGameLevel*> {
 protected:
@@ -136,10 +125,6 @@ public:
     }
 };
 
-// ==========================================
-// LevelInfoLayer Hook
-// ==========================================
-
 class $modify(MyLevelInfoLayer, LevelInfoLayer) {
     struct Fields {
         CCNode* m_tagContainer = nullptr;
@@ -207,10 +192,6 @@ class $modify(MyLevelInfoLayer, LevelInfoLayer) {
         m_fields->m_tagContainer->updateLayout();
     }
 };
-
-// ==========================================
-// Filter Popup UI
-// ==========================================
 
 class FilterPopup : public geode::Popup<> {
 protected:
@@ -290,10 +271,6 @@ public:
     }
 };
 
-// ==========================================
-// LevelBrowserLayer Hook
-// ==========================================
-
 class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
     struct Fields {
         Ref<CCArray> m_cachedLevels; 
@@ -341,7 +318,8 @@ class $modify(MyLevelBrowserLayer, LevelBrowserLayer) {
             auto filtered = CCArray::create();
             
             for (unsigned int i = 0; i < m_fields->m_cachedLevels->count(); ++i) {
-                auto obj = typeinfo_cast<GJGameLevel*>(m_fields->m_cachedLevels->objectAtIndex(i));
+                auto rawObj = m_fields->m_cachedLevels->objectAtIndex(i);
+                auto obj = geode::cast::typeinfo_cast<GJGameLevel*>(rawObj);
                 if (!obj) continue;
 
                 bool matchesAll = true;
