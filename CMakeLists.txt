@@ -1,29 +1,27 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.25)
 
-# Force fmt into header-only mode to prevent Android NDK consteval errors
-set(FMT_HEADER_ONLY ON CACHE BOOL "" FORCE)
-set(FMT_OS OFF CACHE BOOL "" FORCE)
-
-# Tell CMake where to find the Geode SDK path set by GitHub Actions
-if(DEFINED ENV{GEODE_SDK})
-    list(APPEND CMAKE_PREFIX_PATH "$ENV{GEODE_SDK}")
+# Ensure CMake can locate the Geode SDK directory
+if(NOT DEFINED GEODE_SDK)
+    set(GEODE_SDK $ENV{GEODE_SDK})
 endif()
 
-project(YourModName VERSION 1.0.0 LANGUAGES CXX)
+if(DEFINED GEODE_SDK)
+    list(APPEND CMAKE_PREFIX_PATH "${GEODE_SDK}")
+endif()
 
+# Find and initialize Geode
+find_package(Geode REQUIRED)
+
+# Define project details
+project(MyGeodeMod VERSION 1.0.0 LANGUAGES CXX)
+
+# Configure build settings
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Include CPM if present in your repository
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
-    include(cmake/CPM.cmake)
-endif()
-
-# Load Geode SDK
-find_package(Geode REQUIRED)
-
-# Collect all C++ source files
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-
-# Configure Geode mod target
-setup_geode_mod(${PROJECT_NAME} SOURCES ${SOURCES})
+# Define your mod binary and include source files
+setup_geode_mod(
+    ${PROJECT_NAME}
+    SOURCES
+        src/main.cpp
+)
